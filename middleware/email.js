@@ -7,6 +7,8 @@ const client = Sib.ApiClient.instance;
 const apiKey = client.authentications['api-key'];
 apiKey.apiKey = process.env.SEND_IN_BLUE_API_KEY;
 
+const Jobs = {};
+
 //Converting the Sheduled date and time to cronjob
 const dateToCron = (date) => {
     const minutes = date.getMinutes();
@@ -21,45 +23,63 @@ const dateToCron = (date) => {
 // Creating a Schedule email message using SendInBlue
 const scheduler = async (req, res, next) => {
     try {
-        const response = await Schedule.find();
+        const cron = dateToCron(new Date(req.mail.time));
 
-        if (response) {
-            response.forEach((mail) => {
-                const cron = dateToCron(mail.time);
+        Jobs[req.mail._id] = schedule.scheduleJob(cron, () => {
 
-                const job = schedule.scheduleJob(cron, () => {
+            const tranEmailApi = new Sib.TransactionalEmailsApi()
+            const sender = {
+                email: 'akashbadhi7@gmail.com',
+                name: 'Akash B',
+            }
+            const receivers = [
+                {
+                    email: req.mail.email,
+                }
+            ]
 
-                    const tranEmailApi = new Sib.TransactionalEmailsApi()
-                    const sender = {
-                        email: 'akashbadhi7@gmail.com',
-                        name: 'Akash B',
-                    }
-                    const receivers = [
-                        {
-                            email: mail.email,
-                        },
-                    ]
+            tranEmailApi
+                .sendTransacEmail({
+                    sender,
+                    to: receivers,
+                    subject: req.mail.subject,
+                    textContent: req.mail.body,
 
-                    tranEmailApi
-                        .sendTransacEmail({
-                            sender,
-                            to: receivers,
-                            subject: mail.subject,
-                            textContent: mail.body,
+                })
+                //Mail is sent
+                .then(async () => {
+                    await Schedule.findByIdAndUpdate(req.mail._id, { sent: true });
+                })
+                //Mail is unsent
+                .catch(async () => {
+                    await Schedule.findByIdAndUpdate(req.mail._id, { sent: false });
+                })
+        });
+        return res.status(200).json({message: 'Successfully Scheduled the email', succese: true});      
 
-                        })
-                        //Mail is sent
-                        .then(async () => {
-                            await Schedule.findByIdAndUpdate(mail._id, { sent: true });
-                        })
-                        //Mail is unsent
-                        .catch(async () => {
-                            await Schedule.findByIdAndUpdate(mail._id, { sent: false });
-                        })
-                });
+    }
+    catch (error) {
+        return res.status(401).json({ success: false })
+    }
+}
 
-            })
-        }
+// Re-Scheduling email time
+const reScheduler = async (req, res, next) => {
+    try {
+        const cron = dateToCron(new Date(req.mail.time));
+        Jobs[req.mail._id].reschedule(cron);
+        return res.status(200).json({message: 'Successfully Re-Scheduled the email', succese: true});      
+    }
+    catch (error) {
+        return res.status(401).json({ success: false })
+    }
+}
+
+// Deleting the Scheduled
+const deleteScheduler = async (req, res, next) => {
+    try {
+        Jobs[req.mail._id].cancel();
+        return res.status(200).json({message: 'Successfully Deleted the Scheduled email', succese: true});      
     }
     catch (error) {
         return res.status(401).json({ success: false })
@@ -67,5 +87,7 @@ const scheduler = async (req, res, next) => {
 }
 
 module.exports = {
-    scheduler
+    scheduler,
+    reScheduler,
+    deleteScheduler
 }

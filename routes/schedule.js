@@ -15,10 +15,10 @@ router.post('/post', scheduleController.postMail, emailSchedule.scheduler);
 router.get('/get', scheduleController.getMails);
 
 //router for Deleting Mail Schedule
-router.delete('/delete/:mailId', scheduleController.deleteMail, emailSchedule.scheduler);
+router.delete('/delete/:mailId', scheduleController.deleteMail, emailSchedule.deleteScheduler);
 
 //router for Rescheduling Mail Schedule
-router.put('/put', scheduleController.putMail, emailSchedule.scheduler);
+router.patch('/patch', scheduleController.patchMail, emailSchedule.reScheduler);
 
 //router for Reading Unsent Mails
 router.get('/unsent', scheduleController.unsentMails);

@@ -19,8 +19,10 @@ const postMail = async (req, res, next) => {
         if (isstringinvalid(email) || isstringinvalid(time) || isstringinvalid(subject) || isstringinvalid(body)) {
             return res.status(400).json({ err: "Bad parameters. Something is missing" });
         }     
-
-        await Schedule.create({email:email, time:time, subject: subject, body:body});
+        
+        const a = await Schedule.create({email:email, time:time, subject: subject, body:body});
+        const _id = a._id.toJSON();
+        req.mail = { _id, email, time, subject, body };
         next();      
     }
     catch (error) {
@@ -45,11 +47,11 @@ const getMails = async (req, res) => {
 const deleteMail = async (req, res, next) => {
     try {   
         const mailId = req.params.mailId;
+        req.mail = {_id: mailId};
         if(isstringinvalid(mailId))
         {
             return res.status(400).json({succese: false});
         }
-
         await Schedule.findByIdAndDelete(mailId);
         next();       
     }
@@ -60,15 +62,17 @@ const deleteMail = async (req, res, next) => {
 
 
 // Rescheduling the Mail Schedule
-const putMail = async (req, res, next) => {
+const patchMail = async (req, res, next) => {
     try {   
-        const { _id, email, time, subject, body } = req.body;
+        const { _id, time } = req.body;
 
-        if (isstringinvalid(_id) || isstringinvalid(email) || isstringinvalid(time) || isstringinvalid(subject) || isstringinvalid(body)) {
+        req.mail = { _id, time };
+
+        if (isstringinvalid(_id) || isstringinvalid(time) ) {
             return res.status(400).json({ err: "Bad parameters. Something is missing" });
         }   
 
-        await Schedule.findByIdAndUpdate(_id, {email:email, time:time, subject: subject, body:body});
+        await Schedule.findByIdAndUpdate(_id, { time:time });
         next();
     }
     catch (error) {
@@ -86,7 +90,7 @@ const unsentMails = async (req, res) => {
             return res.status(200).json({failed: failed, message: 'Unset Mails found', succese: true});  
         }
 
-        return res.status(404).json({message: 'All Mails are sent', success: false});    
+        return res.status(201).json({message: 'All Mails are sent', success: false});    
     }
     catch (error) {
         res.status(500).json({ message: error, success: false });
@@ -98,6 +102,6 @@ module.exports ={
     postMail,
     getMails,
     deleteMail,
-    putMail,
+    patchMail,
     unsentMails
 }

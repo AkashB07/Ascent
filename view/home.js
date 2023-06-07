@@ -31,9 +31,11 @@ async function addEmail(e) {
         e.target.time.value = '';
         e.target.subject.value = '';
         e.target.body.value = '';
-
+        setTimeout(() => {
+            getMail();
+        }, 1000);
         await axios.post(`${url}:3000/schedule/post`, emailDetails);
-        getMail();
+       
 
     }
     catch (error) {
@@ -52,9 +54,9 @@ async function getMail() {
 
             parentElement.innerHTML += `
              <li id=${mail._id}>
-              ${mail.email} - ${mail.time} - ${mail.subject} - ${mail.body}  
+              ${mail.email} - ${new Date(mail.time)} - ${mail.subject} - ${mail.body}  
               <button onclick='deleteMail("${mail._id}")'>Delete </button>
-              <button onclick='editMail("${mail._id}", "${mail.email}", "${mail.time}", "${mail.subject}", "${mail.body}")'>Edit</button>
+              <button onclick='editMail("${mail._id}", "${mail.email}")'>Edit</button>
                </li>`;
             });
 
@@ -76,27 +78,17 @@ async function deleteMail(mailId) {
 }
 
 // For Rescheduling the Mail Schedule
-async function editMail(id, email, time, subject, body) {
+async function editMail(id, email) {
     try {
         document.getElementById('edit').innerHTML = '';
-        console.log(id, email, time, subject, body);
         const parentElement = document.getElementById('edit');
 
         parentElement.innerHTML += `
         <form  onsubmit='edit(event, "${id}")' >
-            <h1 >Edit Email</h1><br>
+            <h1 >Edit Email Schedule</h1><br>
 
-            <label for="eemail">Edit email</label>
-            <input type="email" name="eemail" value=${email} required><br>
-
-            <label for="etime">Edit Time</label>
+            <label for="etime">${email} - Edit Time</label>
             <input type="datetime-local" name="etime" required><br>
-
-            <label for="esubject">Edit subject</label>
-            <input type="text" name="esubject" value=${subject} required><br>
-
-            <label for="ebody">Edit body</label>
-            <textarea rows="4" name="ebody" value=${body} required></textarea><br>
 
             <button>Edit</button>
 
@@ -119,16 +111,12 @@ async function edit(e, id) {
 
         const emailDetails = {
             _id: id,
-            email: e.target.eemail.value,
             time: new Date(now_utc),
-            subject: e.target.esubject.value,
-            body: e.target.ebody.value,
         }
-
 
         document.getElementById('edit').innerHTML = '';
 
-        await axios.put(`${url}:3000/schedule/put`, emailDetails);
+        await axios.patch(`${url}:3000/schedule/patch`, emailDetails);
         getMail();
 
     }
